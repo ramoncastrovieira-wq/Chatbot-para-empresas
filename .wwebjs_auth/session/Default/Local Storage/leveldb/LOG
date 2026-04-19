@@ -1,0 +1,6 @@
+2026/04/19-20:45:30.077 1c60 Reusing MANIFEST C:\Users\Ramon\Desktop\ChatbotVersãoFinal\chatbot\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/04/19-20:45:30.083 1c60 Recovering log #4
+2026/04/19-20:45:35.742 1c60 Reusing old log C:\Users\Ramon\Desktop\ChatbotVersãoFinal\chatbot\.wwebjs_auth\session\Default\Local Storage\leveldb/000004.log 
+2026/04/19-20:48:48.557 2764 Level-0 table #8: started
+2026/04/19-20:48:48.640 2764 Level-0 table #8: 17018 bytes OK
+2026/04/19-20:48:48.819 2764 Delete type=0 #4

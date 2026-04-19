@@ -1,0 +1,65 @@
+* { box-sizing: border-box; }
+:root{
+	--bg:#f9f6f6;
+	--panel:#ffffff;
+	--accent:#b22222;
+	--accent-dark:#8b0b0b;
+	--accent-light:#ffdede;
+	--muted:#64748b;
+	--text:#1f2d3d;
+}
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; padding:0; background:var(--bg); color:var(--text); }
+header { background:linear-gradient(90deg,#7b0f0f,#b22222); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+header h1 { margin:0; font-size:18px; font-weight:700; letter-spacing:0.3px; }
+nav button { margin-left:8px; padding:8px 12px; border:0; background:rgba(255,255,255,0.10); color:#fff; cursor:pointer; border-radius:6px; }
+nav button:hover { background:rgba(255,255,255,0.18); }
+main { padding:20px; }
+.view { max-width:1100px; margin:0 auto; background:var(--panel); padding:18px; border-radius:10px; box-shadow:0 6px 20px rgba(16,24,40,0.06); }
+form { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+form input { padding:10px; flex:1; min-width:140px; border:1px solid #efecec; border-radius:6px; }
+form button { padding:8px 12px; background:var(--accent); color:#fff; border:0; cursor:pointer; border-radius:6px; }
+ul { list-style:none; padding:0; margin:0; }
+li { padding:8px 0; border-bottom:1px solid #f6f4f4; display:flex; justify-content:space-between; align-items:center; }
+li button { background:#a11b1b; color:#fff; border:0; padding:6px 8px; cursor:pointer; border-radius:6px; }
+
+/* Auto-respostas toggle */
+#btn-toggle-auto { margin-left:8px; padding:8px 12px; border:0; cursor:pointer; border-radius:6px; font-weight:700; }
+.auto-on { background: var(--accent-dark); color: #fff; box-shadow: 0 4px 12px rgba(139,11,11,0.18); }
+.auto-off { background: #f7f6f6; color: #333; box-shadow: none; }
+.auto-indicator { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+.auto-indicator.on { background:#ff6b6b; box-shadow:0 0 6px rgba(255,107,107,0.28); }
+.auto-indicator.off { background:#cfcfcf; }
+
+.chat-container { display:flex; gap:16px; align-items:flex-start; }
+.contacts { width:280px; border-right:1px solid #f1eaea; padding-right:12px; }
+.contacts h3 { margin:0 0 8px 0; font-size:14px; color:#334155; }
+.contacts ul { list-style:none; padding:0; margin:0; }
+.contacts li { padding:10px; cursor:pointer; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.contacts li:hover { background:#fff6f6; }
+.contacts li.active { background:#fff1f0; font-weight:600; }
+.contact-name { font-size:13px; color:#0f1724; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
+.unread-dot { display:none; width:10px; height:10px; border-radius:50%; background:var(--accent); margin-left:8px; }
+.contacts li.has-unread .unread-dot { display:inline-block; }
+
+.chat-area { flex:1; display:flex; flex-direction:column; }
+.chat-header { padding:12px 8px; border-bottom:1px solid #f1eaea; font-weight:700; }
+.messages { list-style:none; padding:12px; max-height:520px; overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.messages li { margin:0; display:flex; }
+.bubble { padding:10px 14px; border-radius:16px; max-width:70%; box-shadow:0 6px 16px rgba(17,24,39,0.04); }
+.msg-in { justify-content:flex-start; }
+.msg-in .bubble { background:#fbfbfb; color:#0f1724; }
+.msg-out { justify-content:flex-end; }
+.msg-out .bubble { background:var(--accent-light); color:var(--accent-dark); }
+.who { font-size:11px; color:var(--muted); margin-bottom:6px; }
+.text { font-size:14px; }
+
+.send-form { display:flex; gap:8px; margin-top:8px; padding-top:8px; border-top:1px solid #f6f4f4; }
+.send-form input { flex:1; padding:12px; border-radius:8px; border:1px solid #efecec; }
+.send-form button { padding:10px 14px; border-radius:8px; background:var(--accent); color:#fff; border:0; }
+
+.qr-img { max-width:260px; display:block; margin:12px 0; }
+
+@media (max-width:860px) {
+	.chat-container { flex-direction:column; }
+	.contacts { width:100%; border-right:none; }
+}
