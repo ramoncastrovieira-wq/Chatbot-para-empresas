@@ -18,12 +18,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Simple demo login (for presentation).
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username === 'admin' && password === 'admin123') return res.json({ ok: true });
-  return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
-});
+// Authentication routes (register / login / me)
+const authRouter = require('../modules/auth');
+app.use('/api', authRouter);
 
 // Clientes endpoints
 app.get('/api/clientes', (req, res) => {
@@ -513,10 +510,23 @@ function initWhatsApp() {
   waClient.on('authenticated', () => { waStatus = 'AUTHENTICATED'; io.emit('status', { state: 'AUTHENTICATED' }); });
   waClient.on('auth_failure', msg => { waStatus = 'AUTH_FAILURE'; io.emit('status', { state: 'AUTH_FAILURE', msg }); });
 
+  // initialize whatsapp message handler (delegates business logic to modules)
+  const whatsappHandler = require('../modules/whatsapp/service')(io, { onAuto: processAutoReply });
+
   waClient.on('message', async msg => {
     try {
       console.log('wa message from:', msg.from, 'body:', msg.body);
       if (msg.isGroup) return;
+      if (whatsappHandler && typeof whatsappHandler.handleIncomingMessage === 'function') {
+        try {
+          await whatsappHandler.handleIncomingMessage(msg);
+        } catch (err) {
+          console.error('whatsapp handler failed:', err);
+        }
+        return;
+      }
+
+      // fallback to legacy behaviour if handler not available
       const from = msg.from;
       const to = msg.to || 'seller@server';
       const body = msg.body;
