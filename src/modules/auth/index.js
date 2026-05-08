@@ -27,17 +27,75 @@ router.post('/register', (req, res) => {
   });
 });
 
-router.post('/login', (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) return res.status(400).json({ error: 'username and password required' });
 
-  db.get('SELECT * FROM users WHERE username = ?', [username], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
-    const ok = bcrypt.compareSync(password, row.password_hash || '');
-    if (!ok) return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
-    const token = jwt.sign({ userId: row.id, username: row.username, role: row.role }, JWT_SECRET, { expiresIn: '8h' });
-    return res.json({ ok: true, token, user: { id: row.id, username: row.username, role: row.role } });
+router.post('/login', (req, res) => {
+  const { username, email, password } = req.body || {};
+  const login = username || email;
+
+  if (!login || !password) {
+    return res.status(400).json({ error: 'username and password required' });
+  }
+
+  db.get('SELECT * FROM users WHERE username = ?', [login], (err, row) => {
+    if (err) {
+      console.error('Erro ao buscar usuário:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (row) {
+      const ok = bcrypt.compareSync(password, row.password_hash || '');
+      if (!ok) {
+        console.warn('Senha inválida para usuário:', login);
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
+      }
+
+      const token = jwt.sign(
+        { userId: row.id, username: row.username, role: row.role },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+      );
+
+      return res.json({
+        ok: true,
+        token,
+        user: { id: row.id, username: row.username, role: row.role }
+      });
+    }
+
+    db.get('SELECT * FROM attendants WHERE email = ?', [login], (attErr, attendant) => {
+      if (attErr) {
+        console.error('Erro ao buscar atendente:', attErr.message);
+        return res.status(500).json({ error: attErr.message });
+      }
+
+      if (!attendant) {
+        console.warn('Usuário não encontrado:', login);
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
+      }
+
+      const ok = bcrypt.compareSync(password, attendant.password_hash || '');
+      if (!ok) {
+        console.warn('Senha inválida para atendente:', login);
+        return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
+      }
+
+      const token = jwt.sign(
+        { attendantId: attendant.id, username: attendant.email, role: attendant.role },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+      );
+
+      return res.json({
+        ok: true,
+        token,
+        user: {
+          id: attendant.id,
+          username: attendant.email,
+          name: attendant.name,
+          role: attendant.role
+        }
+      });
+    });
   });
 });
 

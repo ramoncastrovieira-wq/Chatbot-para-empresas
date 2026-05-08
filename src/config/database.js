@@ -1,7 +1,96 @@
+const fs = require('fs');
+const path = require('path');
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/chatbot';
-const pool = new Pool({ connectionString });
+/**
+ * Carregamento simples de .env sem depender do pacote dotenv.
+ * Isso evita o problema do projeto ter .env, mas process.env continuar vazio.
+ */
+function loadEnvFile() {
+  const possiblePaths = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(__dirname, '../../.env')
+  ];
+
+  for (const envPath of possiblePaths) {
+    if (!fs.existsSync(envPath)) continue;
+
+    const content = fs.readFileSync(envPath, 'utf8');
+
+    content
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'))
+      .forEach(line => {
+        const equalIndex = line.indexOf('=');
+        if (equalIndex === -1) return;
+
+        const key = line.slice(0, equalIndex).trim();
+        let value = line.slice(equalIndex + 1).trim();
+
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      });
+
+    console.log(`Arquivo .env carregado: ${envPath}`);
+    break;
+  }
+}
+
+loadEnvFile();
+
+const DATABASE_URL = process.env.DATABASE_URL;
+
+function createPool() {
+  if (DATABASE_URL && DATABASE_URL.trim()) {
+    return new Pool({
+      connectionString: DATABASE_URL.trim()
+    });
+  }
+
+  const config = {
+    host: process.env.PGHOST || 'localhost',
+    port: Number(process.env.PGPORT || 5432),
+    database: process.env.PGDATABASE || 'chatbot',
+    user: process.env.PGUSER || 'postgres',
+    password: String(process.env.PGPASSWORD || '')
+  };
+
+  if (!config.password) {
+    console.error(`
+ERRO DE CONFIGURAÇÃO DO POSTGRESQL
+
+A senha do PostgreSQL não foi informada.
+
+Crie um arquivo .env na raiz do projeto com uma destas opções:
+
+Opção 1:
+DATABASE_URL=postgresql://postgres:SUA_SENHA@localhost:5432/chatbot
+
+Ou opção 2:
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=chatbot
+PGUSER=postgres
+PGPASSWORD=SUA_SENHA
+
+Depois reinicie o servidor.
+`);
+  }
+
+  return new Pool(config);
+}
+
+const pool = createPool();
 
 function convertQuery(sql) {
   let idx = 0;
@@ -20,53 +109,119 @@ function maybeReturnId(sql) {
 
 const db = {
   all(sql, params, cb) {
-    if (typeof params === 'function') { cb = params; params = []; }
+    if (typeof params === 'function') {
+      cb = params;
+      params = [];
+    }
+
     pool.query(convertQuery(sql), params || [])
       .then(res => cb && cb(null, res.rows))
       .catch(err => cb && cb(err));
   },
+
   get(sql, params, cb) {
-    if (typeof params === 'function') { cb = params; params = []; }
+    if (typeof params === 'function') {
+      cb = params;
+      params = [];
+    }
+
     pool.query(convertQuery(sql), params || [])
       .then(res => cb && cb(null, (res.rows && res.rows[0]) ? res.rows[0] : null))
       .catch(err => cb && cb(err));
   },
+
   run(sql, paramsOrCb, cb) {
     let params = [];
     let callback = null;
-    if (typeof paramsOrCb === 'function') { callback = paramsOrCb; }
-    else { params = paramsOrCb || []; callback = cb; }
+
+    if (typeof paramsOrCb === 'function') {
+      callback = paramsOrCb;
+    } else {
+      params = paramsOrCb || [];
+      callback = cb;
+    }
+
     const sqlToExec = maybeReturnId(sql);
+
     pool.query(convertQuery(sqlToExec), params)
       .then(res => {
         if (callback) {
-          const ctx = { lastID: (res.rows && res.rows[0]) ? res.rows[0].id : undefined, changes: res.rowCount };
+          const ctx = {
+            lastID: (res.rows && res.rows[0]) ? res.rows[0].id : undefined,
+            changes: res.rowCount
+          };
           callback.call(ctx, null);
         }
       })
-      .catch(err => { if (callback) callback(err); });
+      .catch(err => {
+        if (callback) callback(err);
+      });
   },
+
   prepare(sql) {
     const sqlToExec = maybeReturnId(sql);
+
     return {
       run(paramsOrCb, cb) {
         let params = [];
         let callback = null;
-        if (typeof paramsOrCb === 'function') { callback = paramsOrCb; }
-        else { params = paramsOrCb || []; callback = cb; }
+
+        if (typeof paramsOrCb === 'function') {
+          callback = paramsOrCb;
+        } else {
+          params = paramsOrCb || [];
+          callback = cb;
+        }
+
         pool.query(convertQuery(sqlToExec), params)
           .then(res => {
             if (callback) {
-              const ctx = { lastID: (res.rows && res.rows[0]) ? res.rows[0].id : undefined, changes: res.rowCount };
+              const ctx = {
+                lastID: (res.rows && res.rows[0]) ? res.rows[0].id : undefined,
+                changes: res.rowCount
+              };
               callback.call(ctx, null);
             }
           })
-          .catch(err => { if (callback) callback(err); });
+          .catch(err => {
+            if (callback) callback(err);
+          });
       },
-      finalize() { /* noop for compatibility */ }
+
+      finalize() {
+        // Compatibilidade com sqlite.
+      }
     };
-  }
+  },
+
+  pool
 };
+
+async function seedDefaultAdmin() {
+  const adminPassword = 'admin123';
+  const hash = bcrypt.hashSync(adminPassword, 10);
+
+  await pool.query(`
+    INSERT INTO users (username, password_hash, role)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (username)
+    DO UPDATE SET
+      password_hash = EXCLUDED.password_hash,
+      role = EXCLUDED.role
+  `, ['admin', hash, 'admin']);
+
+  await pool.query(`
+    INSERT INTO users (username, password_hash, role)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (username)
+    DO UPDATE SET
+      password_hash = EXCLUDED.password_hash,
+      role = EXCLUDED.role
+  `, ['admin@tico.local', hash, 'admin']);
+
+  console.log('Admin padrão disponível: admin / admin123');
+  console.log('Admin alternativo disponível: admin@tico.local / admin123');
+}
 
 (async function init() {
   try {
@@ -98,7 +253,6 @@ const db = {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Contacts table (WhatsApp contacts)
     await pool.query(`CREATE TABLE IF NOT EXISTS contacts (
       id SERIAL PRIMARY KEY,
       jid TEXT UNIQUE,
@@ -110,7 +264,6 @@ const db = {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Attendants (agents)
     await pool.query(`CREATE TABLE IF NOT EXISTS attendants (
       id SERIAL PRIMARY KEY,
       name TEXT,
@@ -122,7 +275,6 @@ const db = {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Queues
     await pool.query(`CREATE TABLE IF NOT EXISTS queues (
       id SERIAL PRIMARY KEY,
       name TEXT,
@@ -131,7 +283,6 @@ const db = {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Conversations
     await pool.query(`CREATE TABLE IF NOT EXISTS conversations (
       id SERIAL PRIMARY KEY,
       contact_id INTEGER REFERENCES contacts(id),
@@ -144,7 +295,6 @@ const db = {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Ensure messages table has upgraded columns for the new domain model
     await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS conversation_id INTEGER`);
     await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_type TEXT`);
     await pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS sender_id INTEGER`);
@@ -159,6 +309,8 @@ const db = {
       role TEXT DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    await seedDefaultAdmin();
 
     console.log('Postgres DB initialized');
   } catch (err) {

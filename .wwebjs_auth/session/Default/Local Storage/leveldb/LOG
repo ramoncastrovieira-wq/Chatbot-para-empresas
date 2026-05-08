@@ -1,6 +1,3 @@
-2026/05/08-10:47:50.287 4170 Reusing MANIFEST C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/05/08-10:47:50.306 4170 Recovering log #7
-2026/05/08-10:47:50.309 4170 Reusing old log C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\Local Storage\leveldb/000007.log 
-2026/05/08-10:50:59.549 2298 Level-0 table #11: started
-2026/05/08-10:50:59.809 2298 Level-0 table #11: 18994 bytes OK
-2026/05/08-10:50:59.947 2298 Delete type=0 #7
+2026/05/08-15:15:25.163 200c Reusing MANIFEST C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/05/08-15:15:26.668 200c Recovering log #10
+2026/05/08-15:15:26.670 200c Reusing old log C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\Local Storage\leveldb/000010.log 
