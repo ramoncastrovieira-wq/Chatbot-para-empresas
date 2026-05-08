@@ -4,6 +4,9 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const db = require('../config/database');
+const apiRoutes = require('./apiRoutes');
+const contactsService = require('../modules/contacts/service');
+const messagesService = require('../modules/messages/service');
 
 // WhatsApp
 const qrcode = require('qrcode');
@@ -21,6 +24,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Authentication routes (register / login / me)
 const authRouter = require('../modules/auth');
 app.use('/api', authRouter);
+app.use('/api', apiRoutes);
 
 // Clientes endpoints
 app.get('/api/clientes', (req, res) => {
@@ -116,17 +120,33 @@ app.get('/api/messages/:jid', (req, res) => {
 });
 
 app.post('/api/send', async (req, res) => {
-  const { to, body } = req.body;
+  const { to, body, attendant_id } = req.body;
   if (!to || !body) return res.status(400).json({ error: 'to and body required' });
+
   try {
     if (!waClient) return res.status(500).json({ error: 'WhatsApp client not initialized' });
+
     await waClient.sendMessage(to, body);
-    // persist out message
-    db.run('INSERT INTO messages (from_jid, to_jid, body, direction) VALUES (?,?,?,?)', ['seller@server', to, body, 'out'], function(err){
-      if (err) return res.status(500).json({ error: err.message });
-      emitContacts();
-      res.json({ ok: true });
+    const result = await messagesService.createOutgoing({
+      to_jid: to,
+      content: body,
+      sender_attendant_id: attendant_id || null
     });
+
+    io.emit('message', {
+      from: 'seller@server',
+      to,
+      body,
+      timestamp: Date.now(),
+      direction: 'out',
+      conversation_id: result.conversation.id,
+      queue_id: result.conversation.queue_id
+    });
+    io.emit('message:new', result.message);
+    io.emit('conversation:update', result.conversation);
+    emitContacts();
+
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -511,7 +531,7 @@ function initWhatsApp() {
   waClient.on('auth_failure', msg => { waStatus = 'AUTH_FAILURE'; io.emit('status', { state: 'AUTH_FAILURE', msg }); });
 
   // initialize whatsapp message handler (delegates business logic to modules)
-  const whatsappHandler = require('../modules/whatsapp/service')(io, { onAuto: processAutoReply });
+  const whatsappHandler = require('../modules/whatsapp/service')(io, { onAuto: processAutoReply, sendMessage: safeSendMessage });
 
   waClient.on('message', async msg => {
     try {
@@ -545,34 +565,14 @@ function initWhatsApp() {
 initWhatsApp();
 
 // contacts helper and endpoint
-function emitContacts() {
-  const sql = `
-    SELECT jid FROM (
-      SELECT DISTINCT from_jid AS jid FROM messages WHERE from_jid != 'seller@server'
-      UNION
-      SELECT DISTINCT to_jid AS jid FROM messages WHERE to_jid != 'seller@server'
-    ) ORDER BY jid DESC
-  `;
-  db.all(sql, [], (err, rows) => {
-    if (err) return;
-    const contacts = (rows || []).map(r => r.jid).filter(Boolean);
+async function emitContacts() {
+  try {
+    const contacts = await contactsService.listJids();
     io.emit('contactList', contacts);
-  });
+  } catch (err) {
+    console.error('emitContacts error:', err.message);
+  }
 }
-
-app.get('/api/contacts', (req, res) => {
-  const sql = `
-    SELECT jid FROM (
-      SELECT DISTINCT from_jid AS jid FROM messages WHERE from_jid != 'seller@server'
-      UNION
-      SELECT DISTINCT to_jid AS jid FROM messages WHERE to_jid != 'seller@server'
-    ) ORDER BY jid DESC
-  `;
-  db.all(sql, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json((rows || []).map(r => r.jid).filter(Boolean));
-  });
-});
 
 io.on('connection', (socket) => {
   console.log('frontend conectado via socket.io');
@@ -583,12 +583,14 @@ io.on('connection', (socket) => {
   // send contact list on connect
   emitContacts();
 
-  socket.on('loadMessages', (jid) => {
-    if (!jid) return socket.emit('messageHistory', []);
-    db.all('SELECT * FROM messages WHERE from_jid = ? OR to_jid = ? ORDER BY created_at ASC', [jid, jid], (err, rows) => {
-      if (err) return socket.emit('messageHistory', { error: err.message });
+  socket.on('loadMessages', async (jid) => {
+    try {
+      if (!jid) return socket.emit('messageHistory', []);
+      const rows = await messagesService.listByJid(jid);
       socket.emit('messageHistory', rows);
-    });
+    } catch (err) {
+      socket.emit('messageHistory', { error: err.message });
+    }
   });
 });
 

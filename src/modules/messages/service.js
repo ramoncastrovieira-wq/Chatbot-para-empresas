@@ -1,25 +1,44 @@
-const repo = require('./repository');
+const repository = require('./repository');
 const contactsService = require('../contacts/service');
 const conversationsService = require('../conversations/service');
 
 module.exports = {
-  createIncoming: async ({ jid, content, message_type = 'text', timestamp = Date.now(), raw = null }) => {
-    // ensure contact
-    const contact = await contactsService.findOrCreateByJid(jid, { name: null, phone: jid });
-    // ensure conversation
-    const conv = await conversationsService.findOrCreateOpenConversation(contact.id);
-    // persist message
-    const msg = await repo.create({ conversation_id: conv.id, sender_type: 'client', sender_id: contact.id, content, message_type, timestamp, from_jid: jid, to_jid: 'seller@server', direction: 'in' });
-    // update contact last_message
+  createIncoming: async ({ jid, content, message_type = 'text', timestamp = Date.now() }) => {
+    const contact = await contactsService.findOrCreateByJid(jid, { phone: jid });
+    const conversation = await conversationsService.findOrCreateOpenConversation(contact.id);
+    const message = await repository.create({
+      conversation_id: conversation.id,
+      sender_type: 'client',
+      sender_id: contact.id,
+      content,
+      message_type,
+      timestamp,
+      from_jid: jid,
+      to_jid: 'seller@server',
+      direction: 'in'
+    });
     await contactsService.updateLastMessage(contact.id, timestamp);
-    return { message: msg, contact, conversation: conv };
+    return { message, contact, conversation };
   },
-  createOutgoing: async ({ to_jid, content, message_type = 'text', timestamp = Date.now(), sender_attendant_id = null }) => {
+
+  createOutgoing: async ({ to_jid, content, message_type = 'text', timestamp = Date.now(), sender_attendant_id = null, sender_type = 'attendant' }) => {
     const contact = await contactsService.findOrCreateByJid(to_jid, { phone: to_jid });
-    const conv = await conversationsService.findOrCreateOpenConversation(contact.id);
-    const msg = await repo.create({ conversation_id: conv.id, sender_type: 'attendant', sender_id: sender_attendant_id, content, message_type, timestamp, from_jid: 'seller@server', to_jid, direction: 'out' });
+    const conversation = await conversationsService.findOrCreateOpenConversation(contact.id);
+    const message = await repository.create({
+      conversation_id: conversation.id,
+      sender_type,
+      sender_id: sender_attendant_id,
+      content,
+      message_type,
+      timestamp,
+      from_jid: 'seller@server',
+      to_jid,
+      direction: 'out'
+    });
     await contactsService.updateLastMessage(contact.id, timestamp);
-    return { message: msg, contact, conversation: conv };
+    return { message, contact, conversation };
   },
-  listByConversation: async (conversationId) => repo.listByConversation(conversationId)
+
+  listByConversation: repository.listByConversation,
+  listByJid: repository.listByJid
 };

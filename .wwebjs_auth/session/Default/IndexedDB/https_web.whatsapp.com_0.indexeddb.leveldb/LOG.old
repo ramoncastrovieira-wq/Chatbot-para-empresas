@@ -1,3 +1,6 @@
-2026/05/08-14:25:11.514 694 Reusing MANIFEST C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/05/08-14:25:11.519 694 Recovering log #2832
-2026/05/08-14:25:12.163 694 Reusing old log C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/002832.log 
+2026/05/08-16:20:00.591 5004 Reusing MANIFEST C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/05/08-16:20:00.594 5004 Recovering log #2983
+2026/05/08-16:20:00.601 5004 Reusing old log C:\fonts\Chatbot-para-empresas-main\Chatbot-para-empresas-main\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/002983.log 
+2026/05/08-16:20:05.170 5618 Compacting 1@1 + 10@2 files
+2026/05/08-16:20:06.228 5618 Generated table #2989@1: 77775 keys, 2301330 bytes
+2026/05/08-16:20:07.494 5618 Generated table #2990@1: 34191 keys, 2196339 bytes

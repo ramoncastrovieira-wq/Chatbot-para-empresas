@@ -201,23 +201,32 @@ async function seedDefaultAdmin() {
   const adminPassword = 'admin123';
   const hash = bcrypt.hashSync(adminPassword, 10);
 
-  await pool.query(`
-    INSERT INTO users (username, password_hash, role)
-    VALUES ($1, $2, $3)
-    ON CONFLICT (username)
-    DO UPDATE SET
-      password_hash = EXCLUDED.password_hash,
-      role = EXCLUDED.role
-  `, ['admin', hash, 'admin']);
+  async function upsertUser(username, passwordHash, role) {
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE username = $1 LIMIT 1',
+      [username]
+    );
 
-  await pool.query(`
-    INSERT INTO users (username, password_hash, role)
-    VALUES ($1, $2, $3)
-    ON CONFLICT (username)
-    DO UPDATE SET
-      password_hash = EXCLUDED.password_hash,
-      role = EXCLUDED.role
-  `, ['admin@tico.local', hash, 'admin']);
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `UPDATE users
+         SET password_hash = $1,
+             role = $2
+         WHERE username = $3`,
+        [passwordHash, role, username]
+      );
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO users (username, password_hash, role)
+       VALUES ($1, $2, $3)`,
+      [username, passwordHash, role]
+    );
+  }
+
+  await upsertUser('admin', hash, 'admin');
+  await upsertUser('admin@tico.local', hash, 'admin');
 
   console.log('Admin padrão disponível: admin / admin123');
   console.log('Admin alternativo disponível: admin@tico.local / admin123');
@@ -277,18 +286,28 @@ async function seedDefaultAdmin() {
 
     await pool.query(`CREATE TABLE IF NOT EXISTS queues (
       id SERIAL PRIMARY KEY,
-      name TEXT,
+      name TEXT NOT NULL,
+      slug TEXT UNIQUE,
       description TEXT,
+      menu_option TEXT UNIQUE,
       active BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    await pool.query(`ALTER TABLE queues ADD COLUMN IF NOT EXISTS slug TEXT`);
+    await pool.query(`ALTER TABLE queues ADD COLUMN IF NOT EXISTS menu_option TEXT`);
+    await pool.query(`ALTER TABLE queues ADD COLUMN IF NOT EXISTS description TEXT`);
+    await pool.query(`ALTER TABLE queues ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true`);
+
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS queues_slug_unique ON queues(slug) WHERE slug IS NOT NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS queues_menu_option_unique ON queues(menu_option) WHERE menu_option IS NOT NULL`);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS conversations (
       id SERIAL PRIMARY KEY,
       contact_id INTEGER REFERENCES contacts(id),
       assigned_attendant_id INTEGER REFERENCES attendants(id),
       queue_id INTEGER REFERENCES queues(id),
-      status TEXT DEFAULT 'open',
+      status TEXT DEFAULT 'pending',
       started_at TIMESTAMP,
       closed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -309,6 +328,38 @@ async function seedDefaultAdmin() {
       role TEXT DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    const defaultQueues = [
+      ['Várzea Paulista (Centro)', 'varzea-centro', 'Fila da unidade Várzea Paulista Centro', '1'],
+      ['Várzea Paulista (Jd. América)', 'varzea-jd-america', 'Fila da unidade Várzea Paulista Jardim América', '2'],
+      ['Francisco Morato', 'francisco-morato', 'Fila da unidade Francisco Morato', '3'],
+      ['Taipas', 'taipas', 'Fila da unidade Taipas', '4']
+    ];
+
+    for (const [name, slug, description, menuOption] of defaultQueues) {
+      const existingQueue = await pool.query(
+        'SELECT id FROM queues WHERE slug = $1 LIMIT 1',
+        [slug]
+      );
+
+      if (existingQueue.rows.length > 0) {
+        await pool.query(
+          `UPDATE queues
+           SET name = $1,
+               description = $2,
+               menu_option = $3,
+               active = true
+           WHERE slug = $4`,
+          [name, description, menuOption, slug]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO queues (name, slug, description, menu_option, active)
+           VALUES ($1, $2, $3, $4, true)`,
+          [name, slug, description, menuOption]
+        );
+      }
+    }
 
     await seedDefaultAdmin();
 
