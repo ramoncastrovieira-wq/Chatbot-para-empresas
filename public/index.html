@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TICO CRM - Autopeças</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>TICO CRM - Autopeças</h1>
+      <nav>
+        <button id="btn-clientes">Clientes</button>
+        <button id="btn-chat">Chat (WhatsApp)</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="view-login" class="view">
+        <h2>Login</h2>
+        <form id="form-login">
+          <input name="username" placeholder="Usuário" required />
+          <input name="password" type="password" placeholder="Senha" required />
+          <button type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section id="view-clientes" class="view">
+        <h2>Clientes</h2>
+        <form id="form-cliente">
+          <input name="nome" placeholder="Nome" required />
+          <input name="email" placeholder="Email" />
+          <input name="telefone" placeholder="Telefone" />
+          <input name="endereco" placeholder="Endereço" />
+          <button type="submit">Adicionar Cliente</button>
+        </form>
+        <ul id="lista-clientes"></ul>
+      </section>
+
+      <!-- Catálogo de Peças removido da interface -->
+
+      <section id="view-chat" class="view" style="display:none">
+        <h2>Chat de Vendas</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div id="chat-status">Conectando...</div>
+          <button id="btn-toggle-auto">Ativar Auto-Respostas</button>
+        </div>
+        <div class="chat-container">
+          <aside id="contact-list" class="contacts">
+            <h3>Contatos</h3>
+            <ul id="contacts-ul"></ul>
+          </aside>
+          <section id="chat-area" class="chat-area">
+            <div id="qr-area" style="margin:12px 0;"></div>
+            <div id="chat-window" style="display:none">
+              <div id="chat-header">Selecione um contato</div>
+              <ul id="chat-messages" class="messages"></ul>
+              <form id="form-send" class="send-form">
+                <input id="input-body" name="body" placeholder="Mensagem para enviar" required />
+                <button type="submit">Enviar</button>
+              </form>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

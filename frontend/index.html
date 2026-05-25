@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tico Auto Peças Hub</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;background:radial-gradient(circle at top left,rgba(170,0,0,.75) 0%,transparent 34%),radial-gradient(circle at bottom right,rgba(255,20,20,.45) 0%,transparent 26%),linear-gradient(135deg,#210000 0%,#520000 42%,#850000 100%);color:#fff;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto;padding:28px 18px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:28px}
+    .logo{font-size:26px;font-weight:900}.status{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);font-weight:700;font-size:14px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px}.panel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:22px;box-shadow:0 28px 70px rgba(0,0,0,.35);backdrop-filter:blur(12px)}
+    h1{font-size:42px;line-height:1.05;margin-bottom:12px}h2{font-size:22px;margin-bottom:16px}p{color:#ffe0e0;line-height:1.6;margin-bottom:18px}
+    label{display:block;font-weight:700;margin:12px 0 6px}input,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(20,0,0,.78);color:#fff;outline:none}textarea{min-height:95px;resize:vertical}
+    button{margin-top:14px;width:100%;padding:14px 18px;border:0;border-radius:13px;background:linear-gradient(135deg,#ff1f1f,#b00000);color:#fff;font-weight:900;cursor:pointer;box-shadow:0 14px 30px rgba(255,0,0,.25)}button:hover{filter:brightness(1.08)}
+    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}.card{background:rgba(20,0,0,.76);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px}.card small{color:#ffcaca;font-weight:700}.card strong{display:block;font-size:28px;margin-top:6px}
+    .log{background:#120000;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px;height:290px;overflow:auto;font-family:Consolas,monospace;font-size:13px;color:#ffe3e3;white-space:pre-wrap}.list-item{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.1)}.tag{color:#ffb4b4;font-weight:900;white-space:nowrap}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.muted{color:#ffcaca;font-size:13px}.ok{color:#86efac}.bad{color:#fca5a5}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}h1{font-size:34px}.cards{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header><div class="logo">Tico Auto Peças Hub</div><div id="apiStatus" class="status">Verificando API...</div></header>
+    <section class="grid">
+      <div class="panel">
+        <h1>Central operacional conectada ao backend</h1>
+        <p>Esta tela envia dados reais para a API FastAPI, cria contatos, cria conversas, envia mensagens assíncronas para o worker e adiciona conversas à fila.</p>
+
+        <h2>1. Criar contato</h2>
+        <label>Nome</label><input id="contactName" value="Cliente Demonstração" />
+        <label>Telefone</label><input id="contactPhone" value="11977777777" />
+        <label>E-mail</label><input id="contactEmail" value="demo@teste.com" />
+        <button onclick="createContact()">Criar contato</button>
+
+        <hr style="border-color:rgba(255,255,255,.12);margin:22px 0">
+        <h2>2. Criar conversa</h2>
+        <label>ID do contato</label><input id="contactId" value="2" />
+        <button onclick="createConversation()">Criar conversa</button>
+
+        <hr style="border-color:rgba(255,255,255,.12);margin:22px 0">
+        <h2>3. Enviar mensagem para o worker</h2>
+        <label>ID da conversa</label><input id="conversationId" value="1" />
+        <label>Mensagem</label><textarea id="messageContent">Olá, quero atendimento para comprar uma peça.</textarea>
+        <button onclick="sendAsyncMessage()">Enviar mensagem assíncrona</button>
+
+        <hr style="border-color:rgba(255,255,255,.12);margin:22px 0">
+        <h2>4. Gerenciar fila</h2>
+        <div class="row"><div><label>ID da fila</label><input id="queueId" value="1" /></div><div><label>ID da conversa</label><input id="queueConversationId" value="1" /></div></div>
+        <button onclick="addToQueue()">Adicionar conversa à fila</button>
+        <button onclick="getNextQueue()">Puxar próximo atendimento</button>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h2>Painel em tempo real</h2>
+          <div class="cards">
+            <div class="card"><small>Último contato</small><strong id="lastContact">-</strong></div>
+            <div class="card"><small>Última conversa</small><strong id="lastConversation">-</strong></div>
+            <div class="card"><small>Último job</small><strong id="lastJob">-</strong></div>
+            <div class="card"><small>Status job</small><strong id="jobStatus">-</strong></div>
+          </div>
+          <div class="list-item"><div><b>Fila Várzea Paulista</b><br><span class="muted">queue_id: 1</span></div><div class="tag">Operacional</div></div>
+          <div class="list-item"><div><b>Backend FastAPI</b><br><span class="muted">http://127.0.0.1:8000</span></div><div class="tag" id="backendTag">...</div></div>
+        </div>
+        <div class="panel" style="margin-top:18px"><h2>Log da operação</h2><div id="log" class="log"></div></div>
+      </div>
+    </section>
+  </div>
+
+<script>
+const API_BASE="http://127.0.0.1:8000/api/v1";
+function log(message,data=null){const box=document.getElementById("log");const time=new Date().toLocaleTimeString();box.textContent+=`[${time}] ${message}\n`;if(data)box.textContent+=JSON.stringify(data,null,2)+"\n";box.textContent+="\n";box.scrollTop=box.scrollHeight;}
+async function request(path,options={}){const response=await fetch(`${API_BASE}${path}`,{headers:{"Content-Type":"application/json",...(options.headers||{})},...options});const text=await response.text();let data;try{data=text?JSON.parse(text):{}}catch{data={raw:text}}if(!response.ok)throw{status:response.status,data};return data}
+async function checkApi(){try{const res=await fetch(`${API_BASE}/health`);if(!res.ok)throw new Error("API off");document.getElementById("apiStatus").innerHTML="<span class='ok'>API Online</span>";document.getElementById("backendTag").innerHTML="Online";log("API conectada com sucesso.")}catch(e){document.getElementById("apiStatus").innerHTML="<span class='bad'>API Offline</span>";document.getElementById("backendTag").innerHTML="Offline";log("Não foi possível conectar na API. Verifique se o backend está rodando.")}}
+async function createContact(){try{const payload={name:contactName.value,phone:contactPhone.value,email:contactEmail.value,metadata:{}};const data=await request("/contacts",{method:"POST",body:JSON.stringify(payload)});contactId.value=data.id;lastContact.textContent=data.id;log("Contato criado.",data)}catch(e){log(`Erro ao criar contato. Status: ${e.status}`,e.data)}}
+async function createConversation(){try{const payload={contact_id:Number(contactId.value),status:"open",channel:"whatsapp",metadata:{}};const data=await request("/conversations",{method:"POST",body:JSON.stringify(payload)});conversationId.value=data.id;queueConversationId.value=data.id;lastConversation.textContent=data.id;log("Conversa criada.",data)}catch(e){log(`Erro ao criar conversa. Status: ${e.status}`,e.data)}}
+async function sendAsyncMessage(){try{const payload={content:messageContent.value,sender_type:"user",message_type:"text",metadata:{},conversation_id:Number(conversationId.value),contact_id:Number(contactId.value)};const data=await request("/messages/async",{method:"POST",body:JSON.stringify(payload)});lastJob.textContent=data.job_id.slice(0,8);jobStatus.textContent=data.status;log("Mensagem enviada para processamento assíncrono.",data);setTimeout(()=>checkJob(data.job_id),1200)}catch(e){log(`Erro ao enviar mensagem. Status: ${e.status}`,e.data)}}
+async function checkJob(jobId){try{const data=await request(`/jobs/${jobId}`);jobStatus.textContent=data.status;log("Status do job consultado.",data);if(data.status==="queued"||data.status==="started")setTimeout(()=>checkJob(jobId),1500)}catch(e){log(`Erro ao consultar job. Status: ${e.status}`,e.data)}}
+async function addToQueue(){try{const data=await request(`/queues/${Number(queueId.value)}/add/${Number(queueConversationId.value)}`,{method:"POST",body:""});log("Conversa adicionada à fila.",data)}catch(e){log(`Erro ao adicionar à fila. Status: ${e.status}`,e.data)}}
+async function getNextQueue(){try{const data=await request(`/queues/${Number(queueId.value)}/next`);log("Próximo atendimento recuperado.",data)}catch(e){log(`Erro ao puxar próximo atendimento. Status: ${e.status}`,e.data)}}
+checkApi();
+</script>
+</body>
+</html>
