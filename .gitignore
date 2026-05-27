@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite
+*.db
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Ambientes
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Node legado
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# WhatsApp Web.js legado / sessões locais
+.wwebjs_auth/
+.wwebjs_cache/
+src/.wwebjs_auth/
+src/.wwebjs_cache/
+wwebjs_auth/
+wwebjs_cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
